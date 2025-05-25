@@ -251,6 +251,7 @@ def perform_pure_tfidf_search(query_text):
     return results_df_final
 
 
+# --- Suchfunktion für HYBRIDE SUCHE (Dense + BM25 TF-IDF) ---
 def perform_hybrid_bm25_search(query_text):
     start_time_total = time.time()
     print(f"Hybride Suche (Dense + BM25 TF-IDF) nach: '{query_text}'...")

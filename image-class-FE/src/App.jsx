@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { IconArrowRight, IconSearch, IconUpload, IconInfoCircle } from '@tabler/icons-react'; 
+import { IconArrowRight, IconSearch, IconUpload, IconInfoCircle, IconDownload } from '@tabler/icons-react'; 
 import { ActionIcon, TextInput, useMantineTheme, Container, Loader, SimpleGrid, Group, Modal, Image, Text, AspectRatio, Grid, Stack, Title } from '@mantine/core'; 
 import { notifications } from '@mantine/notifications';
 import { useDebouncedCallback } from '@mantine/hooks';
@@ -34,7 +34,7 @@ function App() {
     }
   };
 
-  const debouncedExecuteSearch = useDebouncedCallback(executeSearch, 2000);
+  const debouncedExecuteSearch = useDebouncedCallback(executeSearch, 1000);
 
   const handleImageSearch = (event) => {
     const currentValue = event.currentTarget.value;
@@ -54,6 +54,44 @@ function App() {
     console.log('After setting state: selectedItem =', item, ', modalOpened = true');
   };
 
+  const handleDownloadImage = async (event, item) => {
+    event.stopPropagation(); // Prevent modal from opening when download icon is clicked
+    if (!item || !item.image_url) {
+      console.error("No image URL available for download", item);
+      // Optionally, add a user notification here (e.g., using Mantine's notification system)
+      return;
+    }
+
+    const imageUrl = `http://localhost:8000${item.image_url}`;
+    // Attempt to get a reasonable filename
+    let fileName = item.name || item.unique_image_id;
+    if (!fileName && item.image_url) {
+      const urlParts = item.image_url.split('/');
+      fileName = urlParts[urlParts.length - 1];
+    } else if (!fileName) {
+      fileName = 'download.jpg'; // Default filename
+    }
+
+    try {
+      const response = await fetch(imageUrl);
+      if (!response.ok) {
+        throw new Error(`Failed to fetch image: ${response.status} ${response.statusText}`);
+      }
+      const blob = await response.blob();
+
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.download = fileName;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(link.href); // Clean up the object URL
+    } catch (error) {
+      console.error("Error downloading image:", error);
+      // Optionally, add a user notification here
+    }
+  };
+
   const closeModal = () => {
     console.log('closeModal called');
     setModalOpened(false);
@@ -67,27 +105,6 @@ function App() {
     console.error('Search failed:', searchError.message);
   }
 
-  console.log('Rendering App component. modalOpened:', modalOpened, 'selectedItem:', selectedItem);
-
-  // Helper function to determine score color and format score display
-  const getScoreDisplay = (score) => {
-    if (score === undefined || score === null) return null;
-
-    const scorePercent = Math.round(score * 100);
-    let color;
-    if (score >= 0.85) {
-      color = 'green';
-    } else if (score >= 0.50) {
-      color = 'yellow';
-    } else {
-      color = 'red';
-    }
-    return {
-      text: `${scorePercent}%`,
-      color: color,
-    };
-  };
-
   return (
     <div className='w-full h-full flex flex-col items-center justify-center'>
       {/* Search and Upload UI */}
@@ -99,6 +116,11 @@ function App() {
           placeholder="Search images"
           value={inputValue}
           onChange={handleImageSearch}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') {
+              executeSearch(inputValue);
+            }
+          }}
           leftSection={<IconSearch size={18} stroke={1.5} />}
         />
       </div>
@@ -125,44 +147,37 @@ function App() {
             className='h-full'
           >
             {searchResult?.map((item) => {
-              const scoreDisplay = getScoreDisplay(item.relevance_score_scaled);
               return (
                 <div 
                   key={item.id} 
-                  style={{ 
+                  className='relative cursor-pointer p-2 border border-gray-300 rounded-md hover:shadow-lg transition-shadow'
+                  style={{
                     border: '1px solid #f7f4f4', 
                     borderRadius: '1rem', 
-                    padding: '1rem', 
+                    padding: '0.5rem', 
                     cursor: 'pointer', 
                     position: 'relative' // Added for positioning the score badge
                   }} 
                   onClick={() => handleItemClick(item)} // Make item clickable
                 >
-                  {scoreDisplay && (
-                    <Text 
-                      size="xs" 
-                      fw={700} 
-                      style={{
-                        position: 'absolute',
-                        top: '0.5rem', 
-                        right: '0.5rem',
-                        backgroundColor: scoreDisplay.color,
-                        color: scoreDisplay.color === 'yellow' ? 'black' : 'white', // Ensure contrast
-                        padding: '0.1rem 0.4rem',
-                        borderRadius: '0.25rem',
-                        zIndex: 1 // Ensure it's above the image
-                      }}
-                    >
-                      {scoreDisplay.text}
-                    </Text>
-                  )}
+                  <ActionIcon
+                    variant="subtle" 
+                    color="white"
+                    size="lg"
+                    radius="xl"
+                    style={{ position: 'absolute', top: '0.8rem', right: '0.8rem', zIndex: 10, backgroundColor: '#333' }}
+                    onClick={(e) => handleDownloadImage(e, item)}
+                    title={`Download ${item.name || 'image'}`}
+                  >
+                    <IconDownload size={20} stroke={1.5} />
+                  </ActionIcon>
                   {item.image_url && (
                     <AspectRatio ratio={16 / 9} mb="sm">
-                      <Image src={'http://localhost:8000' + item.image_url} alt={item.name || 'Image preview'} />
+                      <Image src={'http://localhost:8000' + item.image_url} alt={item.name || 'Image preview'} style={{borderRadius: '0.5rem'}}/>
                     </AspectRatio>
                   )}
-                  <Text size="sm" fw={500} truncate="end">{item.name || 'Untitled'}</Text>
-                  <Text size="xs" c="dimmed">ID: {item.id}</Text>
+                  <Text size="sm" fw={500} truncate="end">Name: {item.name || 'Untitled'}</Text>
+                  <Text size="xs" c="dimmed">ID: {item.unique_image_id}</Text>
                 </div>
               );
             })}
@@ -194,20 +209,23 @@ function App() {
                   />
                 )}
               </Grid.Col>
-              <Grid.Col span={{ base: 12, md: 5 }}> {/* Right column for details */}
+              <Grid.Col span={{ base: 12, md: 5 }} style={{ overflowX: 'scroll' }}> {/* Right column for details */}
                 <Stack>
-                  <Title order={3}>{selectedItem.name || 'Untitled'}</Title>
                   
                   {/* Display qdrant_id_uuid if available, otherwise fallback to item.id */}
-                  <Text><strong>ID:</strong> {selectedItem.qdrant_id_uuid || selectedItem.id || 'N/A'}</Text>
-                  
+                  <Text>ID: {selectedItem.unique_image_id || selectedItem.id || 'N/A'}</Text>
+                  <Text>Type: {selectedItem.fileType || 'N/A'}</Text>
+                  <Text>Size: {((selectedItem.fileSize / 1024) / 1024).toFixed(2)} MB</Text>
+                  <Text>Bildnutzung: {selectedItem.Bildnutzung || 'N/A'}</Text>
+                  <Text >Metadata: 
+                    <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll' }}>
+                      
+                      {selectedItem.combined_metadata_text || 'Untitled'}
+                      </div></Text>
                   {/* Display other known fields from the search result item directly */}
-                  {selectedItem.caption && typeof selectedItem.caption === 'string' && <Text><strong>Caption:</strong> {selectedItem.caption}</Text>}
-                  {selectedItem.tags && <Text><strong>Tags:</strong> {Array.isArray(selectedItem.tags) ? selectedItem.tags.join(', ') : String(selectedItem.tags)}</Text>}
+                  {selectedItem.caption && typeof selectedItem.caption === 'string' && <Text>Caption: {selectedItem.caption}</Text>}
+                  {selectedItem.tags && <Text>Tags: {Array.isArray(selectedItem.tags) ? selectedItem.tags.join(', ') : String(selectedItem.tags)}</Text>}
                   
-                  {selectedItem.relevance_score_scaled !== undefined && (
-                    <Text><strong>Score:</strong> {selectedItem.relevance_score_scaled.toFixed(2)}</Text>
-                  )}
 
                   {/* Display other fields from the payload, if payload exists */}
                   {selectedItem.payload && typeof selectedItem.payload === 'object' && (
