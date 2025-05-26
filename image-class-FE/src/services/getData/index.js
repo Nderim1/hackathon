@@ -1,7 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 
 const fetchRootData = async () => {
-  const response = await fetch('http://localhost:8000/');
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/`);
   if (!response.ok) {
     throw new Error('Network response was not ok');
   }
@@ -9,7 +9,7 @@ const fetchRootData = async () => {
 };
 
 const fetchSearchResults = async (searchQuery) => {
-  const response = await fetch(`http://localhost:8000/search?q=${encodeURIComponent(searchQuery)}`);
+  const response = await fetch(`${import.meta.env.VITE_API_URL}/search?q=${encodeURIComponent(searchQuery)}`);
   if (!response.ok) {
     const errorData = await response.text(); 
     throw new Error(`Network response was not ok: ${response.status} ${response.statusText}. ${errorData}`);
