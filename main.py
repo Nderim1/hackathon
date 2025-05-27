@@ -9,10 +9,28 @@ NOTE: This cell will run for a LONG TIME with k_range up to 50 and multiple algo
 """
 
 # --- Standard Library Imports ---
-import os, gc, traceback, pathlib, itertools, sys, time
+import os, gc, traceback, import logging
+import os
+import sys
 from pathlib import Path
-from typing import List, Dict, Any, Optional
-import html as html_escaper
+from typing import List, Optional, Dict, Any, Union, Tuple
+
+# Debug mode flag - set to False for production
+DEBUG_MODE = os.getenv('DEBUG_MODE', 'false').lower() == 'true'
+
+# Optional matplotlib import
+try:
+    if DEBUG_MODE:
+        import matplotlib.pyplot as plt
+        MATPLOTLIB_AVAILABLE = True
+    else:
+        MATPLOTLIB_AVAILABLE = False
+except ImportError:
+    MATPLOTLIB_AVAILABLE = False
+
+# Debug logging
+if DEBUG_MODE and not MATPLOTLIB_AVAILABLE:
+    logger.warning("Debug mode is enabled but matplotlib is not available. Visualization will be disabled.")
 
 # --- FastAPI Imports ---
 from fastapi import FastAPI, Query, HTTPException
@@ -39,7 +57,6 @@ from sklearn.cluster import KMeans, AgglomerativeClustering
 from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score
 from sklearn.preprocessing import StandardScaler # Good practice before PCA/Clustering
-import matplotlib.pyplot as plt
 import pandas as pd # For easier handling of results
 
 try:
@@ -48,7 +65,6 @@ try:
 except ImportError:
     HDBSCAN_AVAILABLE = False
     print("⚠️ HDBSCAN library not found. `pip install hdbscan`. HDBSCAN clustering will be skipped.")
-
 
 # --- IPython & Notebook Imports ---
 from IPython.display import Image as IPImage, HTML, clear_output, display
@@ -77,7 +93,6 @@ try:
 except ImportError as e_fe_import:
     FASTEMBED_AVAILABLE = False
     print(f"⚠️  FastEmbed specific imports FAILED: {e_fe_import}.")
-
 
 # --- Configuration Constants ---
 QDRANT_URL       = "https://eab9412a-9a65-4fcd-8e81-1bc153246739.us-east4-0.gcp.cloud.qdrant.io:6333"
@@ -285,13 +300,19 @@ def perform_comprehensive_clustering_analysis():
             except Exception as e: print(f"      Error k={k_val}: {e}"); wcss_kmeans.append(np.nan); silhouette_kmeans_map[k_val] = np.nan
         
         # Plot K-Means results
-        if actual_k_range_kmeans and wcss_kmeans:
-            plt.figure(figsize=(12, 5)); plt.subplot(1, 2, 1); plt.plot(actual_k_range_kmeans, [w for w in wcss_kmeans if not np.isnan(w)], marker='o'); plt.title('K-Means: Elbow Method'); plt.xlabel('k'); plt.ylabel('WCSS'); plt.xticks(actual_k_range_kmeans);plt.grid(True)
-            valid_s_k = [k for k,s in silhouette_kmeans_map.items() if s > -1 and not np.isnan(s)]
-            valid_s_s = [s for k,s in silhouette_kmeans_map.items() if s > -1 and not np.isnan(s)]
-            if valid_s_k: plt.subplot(1, 2, 2); plt.plot(valid_s_k, valid_s_s, marker='o'); plt.title('K-Means: Silhouette Scores'); plt.xlabel('k'); plt.ylabel('Avg Silhouette'); plt.xticks(actual_k_range_kmeans);plt.grid(True)
-            else: print("[K-Means] No valid silhouette scores to plot.")
-            plt.tight_layout(); plt.show(); display(plt.gcf()); plt.close()
+        if DEBUG_MODE and MATPLOTLIB_AVAILABLE:
+            try:
+                # Plot Elbow and Silhouette for KMeans
+                plt.figure(figsize=(12, 5)); plt.subplot(1, 2, 1); plt.plot(actual_k_range_kmeans, [w for w in wcss_kmeans if not np.isnan(w)], marker='o'); plt.title('K-Means: Elbow Method'); plt.xlabel('k'); plt.ylabel('WCSS'); plt.xticks(actual_k_range_kmeans);plt.grid(True)
+                
+                # Only plot silhouette if we have valid scores
+                valid_s_k = [k for k, s in silhouette_kmeans_map.items() if s > -1 and not np.isnan(s)]
+                valid_s_s = [s for k, s in silhouette_kmeans_map.items() if s > -1 and not np.isnan(s)]
+                if valid_s_k: plt.subplot(1, 2, 2); plt.plot(valid_s_k, valid_s_s, marker='o'); plt.title('K-Means: Silhouette Scores'); plt.xlabel('k'); plt.ylabel('Avg Silhouette'); plt.xticks(actual_k_range_kmeans);plt.grid(True)
+                
+                plt.tight_layout(); plt.show(); display(plt.gcf()); plt.close()
+            except Exception as e:
+                logger.warning(f"Failed to generate K-means plots: {str(e)}")
         
         optimal_k_kmeans = -1
         if valid_s_k: optimal_k_kmeans = valid_s_k[np.argmax(valid_s_s)]; print(f"[K-Means] ✅ Optimal k by Silhouette: {optimal_k_kmeans} (Score: {max(valid_s_s):.4f})")
@@ -392,28 +413,38 @@ def perform_comprehensive_clustering_analysis():
             labels_for_viz = cluster_results[algo_to_visualize]["labels"]
             k_for_viz = cluster_results[algo_to_visualize]["k"]
             
-            plt.figure(figsize=(10, 8))
-            # Create a color map with enough distinct colors
-            # For HDBSCAN, noise points are -1, handle them separately (e.g., grey)
-            unique_labels = np.unique(labels_for_viz)
-            colors = plt.cm.get_cmap('viridis', len(unique_labels)) # Or 'tab20' for more colors
-
-            for i, label in enumerate(unique_labels):
-                points_in_cluster = data_2d_viz[labels_for_viz == label]
-                if label == -1: # Noise points for HDBSCAN
-                    plt.scatter(points_in_cluster[:, 0], points_in_cluster[:, 1], s=10, color='grey', label='Noise', alpha=0.5)
-                else:
-                    plt.scatter(points_in_cluster[:, 0], points_in_cluster[:, 1], s=30, color=colors(i), label=f'Cluster {label}', alpha=0.7)
-            
-            plt.title(f'2D Visualization of Clusters ({cluster_results[algo_to_visualize]["name"]}) using PCA')
-            plt.xlabel('PCA Component 1')
-            plt.ylabel('PCA Component 2')
-            if k_for_viz > 0 : plt.legend(loc='best', bbox_to_anchor=(1.05, 1), borderaxespad=0.) # Only show legend if clusters exist
-            plt.grid(True)
-            plt.tight_layout(rect=[0, 0, 0.85, 1]) # Adjust layout to make space for legend
-            plt.show()
-            display(plt.gcf())
-            plt.close()
+            if DEBUG_MODE and MATPLOTLIB_AVAILABLE:
+                try:
+                    # Plot clusters
+                    plt.figure(figsize=(10, 8))
+                    
+                    # Get unique labels and sort them
+                    unique_labels = sorted(np.unique(labels_for_viz))
+                    
+                    # Generate colors for each cluster
+                    colors = plt.cm.get_cmap('viridis', len(unique_labels)) # Or 'tab20' for more colors
+                    
+                    # Plot each cluster
+                    for i, label in enumerate(unique_labels):
+                        if label == -1:
+                            # Black used for noise.
+                            points_in_cluster = data_2d_viz[labels_for_viz == label]
+                            plt.scatter(points_in_cluster[:, 0], points_in_cluster[:, 1], s=10, color='grey', label='Noise', alpha=0.5)
+                        else:
+                            points_in_cluster = data_2d_viz[labels_for_viz == label]
+                            plt.scatter(points_in_cluster[:, 0], points_in_cluster[:, 1], s=30, color=colors(i), label=f'Cluster {label}', alpha=0.7)
+                    
+                    plt.title(f'2D Visualization of Clusters ({cluster_results[algo_to_visualize]["name"]}) using PCA')
+                    plt.xlabel('PCA Component 1')
+                    plt.ylabel('PCA Component 2')
+                    if k_for_viz > 0 : plt.legend(loc='best', bbox_to_anchor=(1.05, 1), borderaxespad=0.) # Only show legend if clusters exist
+                    plt.grid(True)
+                    plt.tight_layout(rect=[0, 0, 0.85, 1]) # Adjust layout to make space for legend
+                    plt.show()
+                    display(plt.gcf())
+                    plt.close()
+                except Exception as e:
+                    logger.warning(f"Failed to generate cluster visualization: {str(e)}")
         else:
             print("[Clustering] No suitable clustering results to visualize in 2D.")
     else:
