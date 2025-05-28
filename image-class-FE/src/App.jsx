@@ -173,7 +173,7 @@ function App() {
                   </ActionIcon>
                   {item.image_url && (
                     <AspectRatio ratio={16 / 9} mb="sm">
-                      <Image src={'http://localhost:8000' + item.image_url} alt={item.name || 'Image preview'} style={{borderRadius: '0.5rem'}}/>
+                      <Image src={`${import.meta.env.VITE_API_URL}${item.image_url}`} alt={item.name || 'Image preview'} style={{borderRadius: '0.5rem'}}/>
                     </AspectRatio>
                   )}
                   <Text size="sm" fw={500} truncate="end">Name: {item.name || 'Untitled'}</Text>
@@ -203,7 +203,7 @@ function App() {
               <Grid.Col span={{ base: 12, md: 7 }}> {/* Left column for image */}
                 {selectedItem.image_url && (
                   <Image
-                    src={'http://localhost:8000' + selectedItem.image_url}
+                    src={`${import.meta.env.VITE_API_URL}${selectedItem.image_url}`}
                     alt={selectedItem.name || 'Selected image'}
                     style={{ width: '100%', height: 'auto', borderRadius: '8px', maxHeight: '70vh', objectFit: 'contain' }}
                   />
@@ -217,11 +217,16 @@ function App() {
                   <Text>Type: {selectedItem.fileType || 'N/A'}</Text>
                   <Text>Size: {((selectedItem.fileSize / 1024) / 1024).toFixed(2)} MB</Text>
                   <Text>Bildnutzung: {selectedItem.Bildnutzung || 'N/A'}</Text>
-                  <Text >Metadata: 
+                  <Text >Beschreibung: 
                     <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll' }}>
                       
-                      {selectedItem.combined_metadata_text || 'Untitled'}
+                      {selectedItem.description || 'Untitled'}
                       </div></Text>
+                    <Text >AI Beschreibung: 
+                  <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll' }}>
+                    
+                    {selectedItem.gemini_description || 'Untitled'}
+                    </div></Text>
                   {/* Display other known fields from the search result item directly */}
                   {selectedItem.caption && typeof selectedItem.caption === 'string' && <Text>Caption: {selectedItem.caption}</Text>}
                   {selectedItem.tags && <Text>Tags: {Array.isArray(selectedItem.tags) ? selectedItem.tags.join(', ') : String(selectedItem.tags)}</Text>}
