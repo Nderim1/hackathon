@@ -15,6 +15,13 @@ const fileType = (url_raw) => {
 
   return 'Unknown';
 }
+
+const getImageTitle = (desc) => {
+  const match = desc.match(/Name \(Titel\):\s*([^;]+)/);
+  const name = match ? match[1].trim() : null;
+  return name;
+}
+
 function App() {
   const theme = useMantineTheme();
   const [inputValue, setInputValue] = useState('');
@@ -185,7 +192,7 @@ function App() {
                       <Image src={`${import.meta.env.VITE_API_URL}${item.image_url}`} alt={item.name || 'Image preview'} style={{borderRadius: '0.5rem'}}/>
                     </AspectRatio>
                   )}
-                  <Text size="sm" fw={500} truncate="end">Name: {item.name || 'Untitled'}</Text>
+                  <Text size="sm" fw={500} truncate="end">Name: {getImageTitle(item.description) || 'Untitled'}</Text>
                   <Text size="xs" c="dimmed">ID: {item.unique_image_id}</Text>
                 </div>
               );
@@ -201,7 +208,7 @@ function App() {
         <Modal
           opened={modalOpened}
           onClose={closeModal}
-          title={selectedItem?.name || "Image Details"}
+          title={getImageTitle(selectedItem.description) || "Image Details"}
           size="xl" // Increased size for better layout
           centered
           zIndex={2000}
