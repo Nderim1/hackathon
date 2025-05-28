@@ -155,7 +155,7 @@ function App() {
             spacing="xs" 
             className='h-full'
           >
-            {searchResult?.map((item) => {
+            {searchResult?.sort((a, b) => b.score - a.score).map((item) => {
               return (
                 <div 
                   key={item.id} 
@@ -225,7 +225,7 @@ function App() {
                   <Text>ID: {selectedItem.unique_image_id || selectedItem.id || 'N/A'}</Text>
                   <Text>Type: {fileType(selectedItem.image_url) || 'N/A'}</Text>
                   {/* <Text>Size: {((selectedItem.fileSize / 1024) / 1024).toFixed(2)} MB</Text> */}
-                  <Text>Bildnutzung: {selectedItem.Bildnutzung || 'N/A'}</Text>
+                  {/* <Text>Bildnutzung: {selectedItem.Bildnutzung || 'N/A'}</Text> */}
                   <Text >Beschreibung: 
                     <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll', fontSize: '14px' }}>
                       
