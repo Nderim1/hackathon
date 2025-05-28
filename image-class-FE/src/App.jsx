@@ -6,6 +6,15 @@ import { useDebouncedCallback } from '@mantine/hooks';
 import './App.css';
 import { useSearchMutation } from './services/getData';
 
+const fileType = (url_raw) => {
+  const url = url_raw.toLowerCase();
+  if (url.endsWith('.jpg') || url.endsWith('.jpeg')) return 'JPEG';
+  if (url.endsWith('.png')) return 'PNG';
+  if (url.endsWith('.gif')) return 'GIF';
+  if (url.endsWith('.webp')) return 'WebP';
+
+  return 'Unknown';
+}
 function App() {
   const theme = useMantineTheme();
   const [inputValue, setInputValue] = useState('');
@@ -62,7 +71,7 @@ function App() {
       return;
     }
 
-    const imageUrl = `${import.meta.env.VITE_API_URL}${item.image_url}`;
+    const imageUrl = `${import.meta.env.VITE_API_URL}${encodeURI(selectedItem.image_url)}`;
     // Attempt to get a reasonable filename
     let fileName = item.name || item.unique_image_id;
     if (!fileName && item.image_url) {
@@ -203,7 +212,7 @@ function App() {
               <Grid.Col span={{ base: 12, md: 7 }}> {/* Left column for image */}
                 {selectedItem.image_url && (
                   <Image
-                    src={`${import.meta.env.VITE_API_URL}${selectedItem.image_url}`}
+                    src={`${import.meta.env.VITE_API_URL}${encodeURI(selectedItem.image_url)}`}
                     alt={selectedItem.name || 'Selected image'}
                     style={{ width: '100%', height: 'auto', borderRadius: '8px', maxHeight: '70vh', objectFit: 'contain' }}
                   />
@@ -214,16 +223,16 @@ function App() {
                   
                   {/* Display qdrant_id_uuid if available, otherwise fallback to item.id */}
                   <Text>ID: {selectedItem.unique_image_id || selectedItem.id || 'N/A'}</Text>
-                  <Text>Type: {selectedItem.fileType || 'N/A'}</Text>
-                  <Text>Size: {((selectedItem.fileSize / 1024) / 1024).toFixed(2)} MB</Text>
+                  <Text>Type: {fileType(selectedItem.image_url) || 'N/A'}</Text>
+                  {/* <Text>Size: {((selectedItem.fileSize / 1024) / 1024).toFixed(2)} MB</Text> */}
                   <Text>Bildnutzung: {selectedItem.Bildnutzung || 'N/A'}</Text>
                   <Text >Beschreibung: 
-                    <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll' }}>
+                    <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll', fontSize: '14px' }}>
                       
                       {selectedItem.description || 'Untitled'}
                       </div></Text>
                     <Text >AI Beschreibung: 
-                  <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll' }}>
+                  <div style={{ whiteSpace: 'pre-wrap', height: '20vh', overflowY: 'scroll', fontSize: '14px' }}>
                     
                     {selectedItem.gemini_description || 'Untitled'}
                     </div></Text>
