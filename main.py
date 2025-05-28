@@ -42,10 +42,16 @@ from qdrant_client.http.models import SparseVector
 # Initialize FastAPI app
 app = FastAPI()
 
+origins = [
+    "https://image.ntopalli.com",
+    "https://www.image.ntopalli.com",
+    "http://localhost:3000"  # For local development
+]
+
 # Enable CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
