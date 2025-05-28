@@ -62,7 +62,7 @@ function App() {
       return;
     }
 
-    const imageUrl = `http://localhost:8000${item.image_url}`;
+    const imageUrl = `${import.meta.env.VITE_API_URL}${item.image_url}`;
     // Attempt to get a reasonable filename
     let fileName = item.name || item.unique_image_id;
     if (!fileName && item.image_url) {
