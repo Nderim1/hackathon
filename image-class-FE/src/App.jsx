@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { IconArrowRight, IconSearch, IconUpload, IconInfoCircle, IconDownload } from '@tabler/icons-react'; 
 import { ActionIcon, TextInput, useMantineTheme, Container, Loader, SimpleGrid, Group, Modal, Image, Text, AspectRatio, Grid, Stack, Title } from '@mantine/core'; 
 import { notifications } from '@mantine/notifications';
@@ -30,18 +30,28 @@ function App() {
 
   const { mutate: searchMutate, data: searchResult, isPending: isSearchPending, error: searchError } = useSearchMutation();
 
-  console.log(searchResult)
+  console.log('Raw searchResult from API:', searchResult);
+
+  const allDisplayResults = useMemo(() => {
+    const top = searchResult?.top_results || [];
+    const others = searchResult?.other_results || [];
+    // Ensure score exists and default to 0 if not, for robust sorting
+    return [...top, ...others].sort((a, b) => (b.score || 0) - (a.score || 0));
+  }, [searchResult]);
+
   useEffect(() => {
-    if (!isSearchPending && !searchError && searchResult?.length > 0) {
+    const totalResults = allDisplayResults.length;
+
+    if (!isSearchPending && !searchError && totalResults > 0) {
       notifications.show({
         title: 'Search Complete',
-        message: `${searchResult.length} image${searchResult.length !== 1 ? 's' : ''} matching your query found.`,
+        message: `${totalResults} image${totalResults !== 1 ? 's' : ''} matching your query found.`,
         color: 'teal',
         icon: <IconInfoCircle size={18} />,
-        autoClose: 5000, 
+        autoClose: 5000,
       });
     }
-  }, [searchResult, isSearchPending, searchError]); 
+  }, [allDisplayResults, isSearchPending, searchError]); 
 
   const executeSearch = (value) => {
     console.log('Executing debounced search for:', value);
@@ -156,13 +166,13 @@ function App() {
           <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100%' }}>
             {/* Loader shown above */}
           </div>
-        ) : searchResult?.length > 0 ? (
+        ) : allDisplayResults.length > 0 ? (
           <SimpleGrid 
             cols={{ base: 1, xs: 3 }} 
             spacing="xs" 
             className='h-full'
           >
-            {searchResult?.sort((a, b) => b.score - a.score).map((item) => {
+            {allDisplayResults.map((item) => {
               return (
                 <div 
                   key={item.id} 

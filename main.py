@@ -616,21 +616,26 @@ async def search_items(q: str = Query(None)):
                 combined_scores[doc_id] += weights['sparse'] * (1.0 / (60 + sparse_rank))
         
         # Get the final results
-        results = []
+        all_ranked_results = []
         for doc_id, score in sorted(combined_scores.items(), key=lambda x: -x[1]):
             # Use the document from either search result (prefer dense as it has more context)
             doc = dense_results.get(doc_id) or sparse_results.get(doc_id)
             if doc:
                 doc['score'] = score
-                results.append(doc)
+                all_ranked_results.append(doc)
                 
-            if len(results) >= TOP_K_INITIAL_SEARCH:
+            if len(all_ranked_results) >= TOP_K_INITIAL_SEARCH: # Keep the original limit for total processed items
                 break
+        
+        # Split into top 10 and others
+        top_results_count = 10
+        top_results = all_ranked_results[:top_results_count]
+        other_results = all_ranked_results[top_results_count : top_results_count + 50]
 
-        return results
+        return {"top_results": top_results, "other_results": other_results}
     except Exception as e:
         print(f"Error performing search: {e}")
-        return []
+        return {"top_results": [], "other_results": []}
 
 @app.get("/")
 async def read_root():
