@@ -45,6 +45,7 @@ app = FastAPI()
 origins = [
     "https://image.ntopalli.com",
     "https://www.image.ntopalli.com",
+    "https://bilder-pfarrkirchen.cyscript.de",
     "http://localhost:3000"  # For local development
 ]
 
