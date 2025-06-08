@@ -28,7 +28,7 @@ huggingface-hub==0.31.2
 humanfriendly==10.0
 hyperframe==6.1.0
 idna==3.10
-ipython==9.2.0
+ipython~=8.20.0
 ipython_pygments_lexers==1.1.1
 ipywidgets==8.1.7
 jedi==0.19.2
