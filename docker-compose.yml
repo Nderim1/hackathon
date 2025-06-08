@@ -1,0 +1,16 @@
+   # docker-compose.yml
+   version: '3.8'
+
+   services:
+     app:
+       build: .
+       ports:
+         - "8000:8000"  # Map host port 8000 to container port 8000
+       restart: unless-stopped
+       # If you have a .env file for environment variables, you can load it:
+       # env_file:
+       #   - .env
+       # Or define environment variables directly:
+       # environment:
+       #   - DATABASE_URL=your_database_url
+       #   - ANOTHER_VAR=value
