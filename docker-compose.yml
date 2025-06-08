@@ -7,6 +7,9 @@
        ports:
          - "8000:8000"  # Map host port 8000 to container port 8000
        restart: unless-stopped
+       volumes:
+         # Path on host (relative to docker-compose.yml) : Path in container
+         - ./kaggle/input/imaghes_khackinn:/app/kaggle/input/imaghes_khackinn:ro
        # If you have a .env file for environment variables, you can load it:
        # env_file:
        #   - .env
