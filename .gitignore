@@ -45,3 +45,4 @@ ENV/
 Thumbs.db
 
 models_cache
+api.ntopalli.com.nginx_backup.conf
